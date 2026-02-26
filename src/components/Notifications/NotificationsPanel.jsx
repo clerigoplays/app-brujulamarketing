@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { 
   Bell, X, DollarSign, CheckSquare, AlertCircle,
   ChevronRight, Filter, RefreshCw, BellOff,
-  FileText, Copy, Check, Download
+  FileText, Copy, Check, Download, Upload
 } from 'lucide-react'
 import { useNotifications } from '../../hooks/useNotifications'
 import { formatCLP, formatDate } from '../../utils/formatters'
@@ -263,7 +263,90 @@ Devuélveme ÚNICAMENTE el código HTML completo, sin texto adicional antes ni d
           {/* PASO 1 */}
           {paso === 1 && (
             <>
-              <p className="informe-intro">Ingresa los datos reales de la campaña para generar el análisis comparativo con el mercado.</p>
+              <div className="csv-upload-bar">
+                <span className="csv-label">¿Tienes el reporte de Meta?</span>
+                <label className="btn-csv">
+                  <Upload size={14}/> Cargar CSV
+                  <input
+                    type="file"
+                    accept=".csv"
+                    style={{display:'none'}}
+                    onChange={async e => {
+                      const file = e.target.files[0]
+                      if (!file) return
+                      const text = await file.text()
+                      const lines = text.split('\n').filter(l => l.trim())
+                      // Detectar separador
+                      const sep = lines[0].includes(';') ? ';' : ','
+                      // Parsear headers respetando comillas
+                      function parseCsvLine(line) {
+                        const result = []
+                        let cur = '', inQ = false
+                        for (let i = 0; i < line.length; i++) {
+                          const c = line[i]
+                          if (c === '"') { inQ = !inQ }
+                          else if (c === sep && !inQ) { result.push(cur.trim()); cur = '' }
+                          else { cur += c }
+                        }
+                        result.push(cur.trim())
+                        return result
+                      }
+                      const headers = parseCsvLine(lines[0]).map(h => h.replace(/^"|"$/g,'').trim())
+                      const values = parseCsvLine(lines[1] || '').map(v => v.replace(/^"|"$/g,'').trim())
+                      const row = {}
+                      headers.forEach((h, i) => { row[h] = values[i] || '' })
+
+                      // Mapeo de columnas CSV → campos del formulario
+                      const mapeo = {
+                        'Alcance': 'personas_alcanzadas',
+                        'Impresiones': 'impresiones',
+                        'Frecuencia': 'frecuencia',
+                        'Resultados': 'conversaciones',
+                        'Costo por resultados': 'costo_por_conversion',
+                        'CTR (porcentaje de clics en el enlace)': 'ctr',
+                        'Importe gastado (CLP)': 'inversion',
+                      }
+                      const nuevos = { ...datos }
+                      // Campos que deben redondearse a entero (pesos)
+                        const camposEnteros = ['inversion', 'personas_alcanzadas', 'impresiones', 'conversaciones', 'costo_por_conversion']
+                        // Campos que conservan decimales
+                        const camposDecimales = ['frecuencia', 'ctr']
+
+                        Object.entries(mapeo).forEach(([col, campo]) => {
+                          const val = row[col]
+                          if (val !== undefined && val !== '') {
+                            // El CSV de Meta usa punto como separador decimal (notación anglosajona)
+                            // Primero parseamos el número real
+                            const numReal = parseFloat(val)
+                            if (isNaN(numReal)) {
+                              nuevos[campo] = val
+                            } else if (camposEnteros.includes(campo)) {
+                              // Redondear a entero y mostrar sin decimales
+                              nuevos[campo] = String(Math.round(numReal))
+                            } else if (camposDecimales.includes(campo)) {
+                              // Conservar hasta 2 decimales, usando punto (el campo acepta texto libre)
+                              nuevos[campo] = String(Math.round(numReal * 100) / 100)
+                            } else {
+                              nuevos[campo] = String(numReal)
+                            }
+                          }
+                        })
+                      // Cargar rubro desde BD usando proyecto_id
+                      try {
+                        const { data: proy } = await supabase
+                          .from('proyectos')
+                          .select('cliente:clientes(rubro)')
+                          .eq('id', notif.proyecto_id)
+                          .single()
+                        if (proy?.cliente?.rubro) nuevos.rubro = proy.cliente.rubro
+                      } catch(_) {}
+                      setDatos(nuevos)
+                      e.target.value = ''
+                    }}
+                  />
+                </label>
+              </div>
+              <p className="informe-intro">Revisa o completa los datos antes de continuar.</p>
               <div className="informe-grid">
                 {Object.keys(datos).map(key => (
                   <div key={key} className="form-group">

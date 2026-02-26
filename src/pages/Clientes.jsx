@@ -34,6 +34,7 @@ export default function Clientes() {
     email: '',
     telefono: '',
     estado: 'activo',
+    rubro: '',
     notas: ''
   })
   const [errors, setErrors] = useState({})
@@ -164,6 +165,7 @@ export default function Clientes() {
         email: cliente.email,
         telefono: cliente.telefono || '',
         estado: cliente.estado,
+        rubro: cliente.rubro || '',
         notas: cliente.notas || ''
       })
     } else {
@@ -174,6 +176,7 @@ export default function Clientes() {
         email: '',
         telefono: '',
         estado: 'activo',
+        rubro: '',
         notas: ''
       })
     }
@@ -190,6 +193,7 @@ export default function Clientes() {
       email: '',
       telefono: '',
       estado: 'activo',
+      rubro: '',
       notas: ''
     })
     setErrors({})
@@ -327,6 +331,12 @@ export default function Clientes() {
                     <span>{cliente.telefono}</span>
                   </div>
                 )}
+                {cliente.rubro && (
+                  <div className="cliente-info">
+                    <Briefcase size={14} />
+                    <span>{cliente.rubro}</span>
+                  </div>
+                )}
               </div>
 
               {/* Footer de la card */}
@@ -426,6 +436,19 @@ export default function Clientes() {
                     value={formData.telefono}
                     onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
                     placeholder="+56 9 1234 5678"
+                  />
+                </div>
+
+                {/* Rubro */}
+                <div className="form-group">
+                  <label htmlFor="rubro">Rubro</label>
+                  <input
+                    id="rubro"
+                    type="text"
+                    className="input"
+                    value={formData.rubro}
+                    onChange={(e) => setFormData({ ...formData, rubro: e.target.value })}
+                    placeholder="Ej: Lácteos, Retail, Construcción..."
                   />
                 </div>
 

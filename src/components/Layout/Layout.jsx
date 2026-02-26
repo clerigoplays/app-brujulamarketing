@@ -3,7 +3,7 @@ import { Home, Users, Briefcase, DollarSign, CheckSquare, Settings, Calculator, 
 import NotificationsPanel from '../Notifications/NotificationsPanel'
 import './Layout.css'
 
-export default function Layout({ children, currentPage, onNavigate }) {
+export default function Layout({ children, currentPage, onNavigate, usuario, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const menuItems = [
@@ -30,8 +30,17 @@ export default function Layout({ children, currentPage, onNavigate }) {
           </div>
 
           <div className="header-right">
-            {/* Notificaciones */}
             <NotificationsPanel onNavigate={onNavigate} />
+
+            <div className="usuario-badge">
+              <div className={`user-avatar-sm ${usuario === 'Andrés' ? 'andres' : 'denisse'}`}>
+                {usuario?.charAt(0)}
+              </div>
+              <span className="usuario-nombre">{usuario}</span>
+              <button className="btn-logout" onClick={onLogout} title="Cerrar sesión">
+                ↩
+              </button>
+            </div>
 
             <button 
               className="menu-toggle"

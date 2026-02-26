@@ -203,37 +203,77 @@ export function useNotifications() {
         .gte('fecha_fin', ahora.toISOString().split('T')[0])
         .lte('fecha_fin', fechaLimiteServicios.toISOString().split('T')[0])
 
-      serviciosPorTerminar?.forEach(proyecto => {
+      for (const proyecto of (serviciosPorTerminar || [])) {
         const dias = getDaysRemaining(proyecto.fecha_fin)
         let prioridad = 'media'
         let detalle = `Termina en ${dias} días`
-        
-        if (dias === 0) {
-          prioridad = 'alta'
-          detalle = '¡Termina hoy!'
-        } else if (dias === 1) {
-          prioridad = 'alta'
-          detalle = 'Termina mañana'
-        } else if (dias <= 3) {
-          prioridad = 'alta'
-        }
 
-        notifs.push({
-          id: `servicio-termina-${proyecto.id}`,
-          tipo: 'servicio-termina',
-          prioridad,
-          titulo: '⚠️ Servicio por terminar',
-          mensaje: `${proyecto.cliente?.nombre} - ${proyecto.nombre}`,
-          detalle,
-          proyecto: proyecto.nombre,
-          proyecto_id: proyecto.id,
-          cliente: proyecto.cliente?.nombre,
-          servicio: proyecto.servicio?.nombre,
-          fecha: proyecto.fecha_fin,
-          link: 'proyectos',
-          mostrarInforme: dias <= 3
-        })
-      })
+        if (dias === 0) { prioridad = 'alta'; detalle = '¡Termina hoy!' }
+        else if (dias === 1) { prioridad = 'alta'; detalle = 'Termina mañana' }
+        else if (dias <= 3) { prioridad = 'alta' }
+
+        // ── Si faltan ≤3 días, crear tarea de informe si no existe ya ──
+        if (dias <= 3) {
+          const { data: tareaExistente } = await supabase
+            .from('tareas')
+            .select('id, estado')
+            .eq('proyecto_id', proyecto.id)
+            .eq('tipo', 'informe-mensual')
+            .maybeSingle()
+
+          if (!tareaExistente) {
+            // Crear la tarea automáticamente
+            await supabase.from('tareas').insert([{
+              proyecto_id: proyecto.id,
+              titulo: `📊 Generar informe mensual — ${proyecto.nombre}`,
+              descripcion: `Campaña de ${proyecto.cliente?.nombre}. Genera el informe de resultados Meta Ads antes del cierre del servicio (${proyecto.fecha_fin}).`,
+              prioridad: 'alta',
+              estado: 'pendiente',
+              fecha_vencimiento: proyecto.fecha_fin,
+              tipo: 'informe-mensual',
+              metadata: { proyecto_id: proyecto.id, cliente: proyecto.cliente?.nombre }
+            }])
+          }
+
+          // Solo agregar notificación si la tarea NO está completada
+          const tareaCompletada = tareaExistente?.estado === 'completada'
+          if (!tareaCompletada) {
+            notifs.push({
+              id: `servicio-termina-${proyecto.id}`,
+              tipo: 'servicio-termina',
+              prioridad,
+              titulo: '⚠️ Servicio por terminar',
+              mensaje: `${proyecto.cliente?.nombre} - ${proyecto.nombre}`,
+              detalle,
+              proyecto: proyecto.nombre,
+              proyecto_id: proyecto.id,
+              cliente: proyecto.cliente?.nombre,
+              servicio: proyecto.servicio?.nombre,
+              fecha: proyecto.fecha_fin,
+              link: 'tareas',
+              mostrarInforme: true,
+              tarea_informe_id: tareaExistente?.id
+            })
+          }
+        } else {
+          // Entre 4-7 días: solo notificación informativa sin botón de informe
+          notifs.push({
+            id: `servicio-termina-${proyecto.id}`,
+            tipo: 'servicio-termina',
+            prioridad,
+            titulo: '⚠️ Servicio por terminar',
+            mensaje: `${proyecto.cliente?.nombre} - ${proyecto.nombre}`,
+            detalle,
+            proyecto: proyecto.nombre,
+            proyecto_id: proyecto.id,
+            cliente: proyecto.cliente?.nombre,
+            servicio: proyecto.servicio?.nombre,
+            fecha: proyecto.fecha_fin,
+            link: 'proyectos',
+            mostrarInforme: false
+          })
+        }
+      }
 
       // ========================================
       // 7. SERVICIOS TERMINADOS (necesitan renovación)
