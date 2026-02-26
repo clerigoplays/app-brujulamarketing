@@ -1,0 +1,164 @@
+.pagos-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Grid de Pagos */
+.pagos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.pago-card {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.pago-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  transition: opacity 0.3s ease;
+}
+
+.pago-card.estado-pagado::before {
+  background: var(--color-success);
+}
+
+.pago-card.estado-pendiente::before {
+  background: var(--color-warning);
+}
+
+.pago-card.estado-vencido::before {
+  background: var(--color-danger);
+}
+
+.pago-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+/* Card Header */
+.pago-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.pago-estado-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.estado-pagado .pago-estado-badge {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--color-success);
+}
+
+.estado-pendiente .pago-estado-badge {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--color-warning);
+}
+
+.estado-vencido .pago-estado-badge {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--color-danger);
+}
+
+.pago-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Card Body */
+.pago-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pago-monto {
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.pago-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.pago-info svg {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  opacity: 0.7;
+}
+
+.pago-alerta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(245, 158, 11, 0.1);
+  border-left: 3px solid var(--color-warning);
+  border-radius: 6px;
+  color: var(--color-warning);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Card Footer */
+.pago-card-footer {
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pago-cliente {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+/* Stat Cards con colores específicos */
+.icon-red {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pagos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Ajustes para los nuevos filtros */
+.filters-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
