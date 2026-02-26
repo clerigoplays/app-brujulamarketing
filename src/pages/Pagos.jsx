@@ -611,7 +611,7 @@ export default function Pagos() {
                     onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
                     placeholder="150000"
                     min="0"
-                    step="1000"
+                    step="1"
                   />
                   {errors.monto && (
                     <span className="error-message">

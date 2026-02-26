@@ -17,11 +17,32 @@ export function formatCLP(amount) {
   }).format(amount)
 }
 
+// Helper: parsea fecha YYYY-MM-DD como fecha local (sin desplazamiento UTC)
+function parseDateLocal(date) {
+  if (!date) return null
+  // Si ya es un objeto Date, devolverlo tal cual
+  if (date instanceof Date) return date
+  // Si es string tipo "YYYY-MM-DD", parsearlo como local para evitar UTC offset
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [year, month, day] = date.split('-').map(Number)
+    return new Date(year, month - 1, day)
+  }
+  // Para strings con hora (ISO completo), usar Date normal
+  return new Date(date)
+}
+
 // Formatear fecha corta (DD/MM/YYYY)
 export function formatDate(date) {
   if (!date) return '-'
   
-  const d = new Date(date)
+  const d = parseDateLocal(date)
+  if (!d || isNaN(d)) return '-'
+
+  // Si es fecha sin hora (solo YYYY-MM-DD), formatear directo sin timezone
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return d.toLocaleDateString('es-CL')
+  }
+
   return d.toLocaleDateString('es-CL', {
     timeZone: CONFIG.timezone
   })
@@ -31,7 +52,18 @@ export function formatDate(date) {
 export function formatDateLong(date) {
   if (!date) return '-'
   
-  const d = new Date(date)
+  const d = parseDateLocal(date)
+  if (!d || isNaN(d)) return '-'
+
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return d.toLocaleDateString('es-CL', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+
   return d.toLocaleDateString('es-CL', {
     timeZone: CONFIG.timezone,
     weekday: 'long',
@@ -76,8 +108,12 @@ export function getChileTime() {
 export function getDaysRemaining(date) {
   if (!date) return null
   
-  const today = new Date()
-  const target = new Date(date)
+  const today = parseDateLocal(
+    new Date().toLocaleDateString('en-CA', { timeZone: CONFIG.timezone })
+  )
+  const target = parseDateLocal(date)
+  if (!target || isNaN(target)) return null
+
   const diffTime = target - today
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   

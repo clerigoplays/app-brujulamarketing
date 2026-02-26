@@ -226,10 +226,12 @@ export function useNotifications() {
           mensaje: `${proyecto.cliente?.nombre} - ${proyecto.nombre}`,
           detalle,
           proyecto: proyecto.nombre,
+          proyecto_id: proyecto.id,
           cliente: proyecto.cliente?.nombre,
           servicio: proyecto.servicio?.nombre,
           fecha: proyecto.fecha_fin,
-          link: 'proyectos'
+          link: 'proyectos',
+          mostrarInforme: dias <= 3
         })
       })
 

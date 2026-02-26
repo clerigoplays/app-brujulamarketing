@@ -42,7 +42,8 @@ export default function Proyectos() {
   const [editingProyecto, setEditingProyecto] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [proyectoToDelete, setProyectoToDelete] = useState(null)
-  
+  const [informesProyecto, setInformesProyecto] = useState({}) // { proyecto_id: [informes] }
+  const [modalVerInformes, setModalVerInformes] = useState(null) // proyecto seleccionado
   const [formData, setFormData] = useState({
     cliente_id: '',
     servicio_id: '',
@@ -105,6 +106,19 @@ export default function Proyectos() {
       if (serviciosError) throw serviciosError
       setServicios(serviciosData || [])
 
+// Cargar informes por proyecto
+      const { data: informesData } = await supabase
+        .from('informes_campana')
+        .select('id, proyecto_id, titulo, created_at')
+        .order('created_at', { ascending: false })
+
+      const informesPorProyecto = {}
+      informesData?.forEach(inf => {
+        if (!informesPorProyecto[inf.proyecto_id]) informesPorProyecto[inf.proyecto_id] = []
+        informesPorProyecto[inf.proyecto_id].push(inf)
+      })
+      setInformesProyecto(informesPorProyecto)
+      
     } catch (error) {
       console.error('Error cargando datos:', error)
       alert('Error al cargar datos')
@@ -571,6 +585,98 @@ function duplicateProyecto(proyecto) {
     )
   }
 
+  // Modal para ver informes de un proyecto
+  function ModalVerInformes({ proyecto, onClose }) {
+    const informes = informesProyecto[proyecto.id] || []
+    const [descargando, setDescargando] = useState(null)
+
+    async function descargarInforme(informe) {
+      setDescargando(informe.id)
+      try {
+        const { data } = await supabase
+          .from('informes_campana')
+          .select('html_content, titulo')
+          .eq('id', informe.id)
+          .single()
+
+        const blob = new Blob([data.html_content], { type: 'text/html;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${data.titulo?.toLowerCase().replace(/\s+/g, '-')}.html`
+        a.click()
+        URL.revokeObjectURL(url)
+      } catch (err) {
+        alert('Error al descargar el informe')
+      } finally {
+        setDescargando(null)
+      }
+    }
+
+    async function eliminarInforme(informeId) {
+      if (!confirm('¿Eliminar este informe?')) return
+      const { error } = await supabase.from('informes_campana').delete().eq('id', informeId)
+      if (!error) loadData()
+    }
+
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-container" style={{maxWidth: 520}} onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <div>
+              <h2><FileText size={20} /> Informes de Campaña</h2>
+              <p style={{fontSize:13, color:'var(--color-text-secondary)', marginTop:2}}>
+                {proyecto.nombre} — {proyecto.cliente?.nombre}
+              </p>
+            </div>
+            <button className="btn-icon" onClick={onClose}><X size={20}/></button>
+          </div>
+          <div className="modal-body">
+            {informes.length === 0 ? (
+              <div className="empty-state" style={{padding:'40px 0'}}>
+                <FileText size={40} />
+                <p>No hay informes generados para este proyecto</p>
+              </div>
+            ) : (
+              <div style={{display:'flex', flexDirection:'column', gap:10}}>
+                {informes.map(inf => (
+                  <div key={inf.id} style={{
+                    display:'flex', alignItems:'center', justifyContent:'space-between',
+                    padding:'12px 16px', background:'var(--color-surface)',
+                    borderRadius:8, border:'1px solid var(--color-border)'
+                  }}>
+                    <div>
+                      <div style={{fontWeight:600, fontSize:14}}>{inf.titulo}</div>
+                      <div style={{fontSize:12, color:'var(--color-text-secondary)', marginTop:2}}>
+                        {formatDate(inf.created_at)}
+                      </div>
+                    </div>
+                    <div style={{display:'flex', gap:8}}>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{padding:'6px 12px', fontSize:12}}
+                        onClick={() => descargarInforme(inf)}
+                        disabled={descargando === inf.id}
+                      >
+                        {descargando === inf.id ? '...' : '⬇ Descargar'}
+                      </button>
+                      <button 
+                        className="btn-icon btn-icon-danger"
+                        onClick={() => eliminarInforme(inf.id)}
+                      >
+                        <Trash2 size={14}/>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="proyectos-page fade-in">
       {/* Header */}
@@ -753,9 +859,30 @@ function duplicateProyecto(proyecto) {
                   <DollarSign size={16} />
                   {formatCLP(proyecto.precio)}
                 </div>
-                <span className={`status-badge status-${proyecto.estado}`}>
-                  {proyecto.estado}
-                </span>
+                <div style={{display:'flex', alignItems:'center', gap:6}}>
+  <span className={`status-badge status-${proyecto.estado}`}>
+    {proyecto.estado}
+  </span>
+  {(informesProyecto[proyecto.id]?.length > 0) && (
+    <button
+      className="btn-icon"
+      title={`Ver informes (${informesProyecto[proyecto.id].length})`}
+      onClick={(e) => { e.stopPropagation(); setModalVerInformes(proyecto) }}
+      style={{color:'#818cf8', position:'relative'}}
+    >
+      <FileText size={15} />
+      <span style={{
+        position:'absolute', top:-4, right:-4,
+        background:'#6366f1', color:'#fff',
+        borderRadius:'50%', width:14, height:14,
+        fontSize:9, fontWeight:700,
+        display:'flex', alignItems:'center', justifyContent:'center'
+      }}>
+        {informesProyecto[proyecto.id].length}
+      </span>
+    </button>
+  )}
+</div>
               </div>
             </div>
           ))}
@@ -1259,6 +1386,13 @@ function duplicateProyecto(proyecto) {
             </div>
           </div>
         </div>
+      )}
+
+      {modalVerInformes && (
+        <ModalVerInformes 
+          proyecto={modalVerInformes} 
+          onClose={() => setModalVerInformes(null)} 
+        />
       )}
     </div>
   )
