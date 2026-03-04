@@ -119,7 +119,8 @@ export default function Tareas() {
       const proyectos7dias = proyectosData?.filter(p => {
         if (!p.fecha_fin) return false
         const fechaFin = new Date(p.fecha_fin)
-        return fechaFin >= hoy && fechaFin <= en7Dias
+        // Incluir vencidos Y los próximos 7 días
+        return fechaFin <= en7Dias
       }) || []
 
       // Filtrar proyectos cuya tarea de informe ya fue completada
@@ -904,7 +905,7 @@ Devuélveme ÚNICAMENTE el código HTML completo, sin texto adicional antes ni d
         <div className="alerta-servicios glass">
           <AlertTriangle size={20} />
           <div className="alerta-content">
-            <strong>⚠️ Servicios por terminar en los próximos 7 días:</strong>
+            <strong>⚠️ Servicios por terminar o vencidos:</strong>
             <div className="alerta-lista">
               {proyectosConAlerta.map(p => {
                 const dias = getDaysRemaining(p.fecha_fin)
@@ -912,7 +913,7 @@ Devuélveme ÚNICAMENTE el código HTML completo, sin texto adicional antes ni d
                 return (
                   <span key={p.id} className={`alerta-item ${esUrgente ? 'alerta-item-urgente' : ''}`}>
                     {p.cliente?.nombre} - {p.nombre} ({formatDate(p.fecha_fin)})
-                    {esUrgente && (
+                    {(esUrgente || (dias !== null && dias < 0)) && (
                       <button
                         className="btn-informe-alerta"
                         title="Generar informe mensual"

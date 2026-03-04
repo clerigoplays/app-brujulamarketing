@@ -289,8 +289,33 @@ export function useNotifications() {
         .not('fecha_fin', 'is', null)
         .lt('fecha_fin', ahora.toISOString().split('T')[0])
 
-      serviciosTerminados?.forEach(proyecto => {
+      for (const proyecto of (serviciosTerminados || [])) {
         const dias = Math.abs(getDaysRemaining(proyecto.fecha_fin))
+
+        // Verificar si la tarea de informe ya fue completada
+        const { data: tareaInforme } = await supabase
+          .from('tareas')
+          .select('id, estado')
+          .eq('proyecto_id', proyecto.id)
+          .eq('tipo', 'informe-mensual')
+          .maybeSingle()
+
+        const tareaCompletada = tareaInforme?.estado === 'completada'
+
+        // Crear tarea de informe si no existe
+        if (!tareaInforme) {
+          await supabase.from('tareas').insert([{
+            proyecto_id: proyecto.id,
+            titulo: `📊 Generar informe mensual — ${proyecto.nombre}`,
+            descripcion: `Campaña de ${proyecto.cliente?.nombre}. Servicio vencido el ${proyecto.fecha_fin}.`,
+            prioridad: 'alta',
+            estado: 'pendiente',
+            fecha_vencimiento: proyecto.fecha_fin,
+            tipo: 'informe-mensual',
+            metadata: { proyecto_id: proyecto.id, cliente: proyecto.cliente?.nombre }
+          }])
+        }
+
         notifs.push({
           id: `servicio-terminado-${proyecto.id}`,
           tipo: 'servicio-terminado',
@@ -299,12 +324,14 @@ export function useNotifications() {
           mensaje: `${proyecto.cliente?.nombre} - ${proyecto.nombre}`,
           detalle: `Terminó hace ${dias} día${dias !== 1 ? 's' : ''} - ¿Renovar?`,
           proyecto: proyecto.nombre,
+          proyecto_id: proyecto.id,
           cliente: proyecto.cliente?.nombre,
           servicio: proyecto.servicio?.nombre,
           fecha: proyecto.fecha_fin,
-          link: 'proyectos'
+          link: 'tareas',
+          mostrarInforme: !tareaCompletada
         })
-      })
+      }
 
 // ========================================
 // 8. EGRESOS POR VENCER (próximos 3 días)
