@@ -78,7 +78,7 @@ export default function Layout({ children, currentPage, onNavigate, usuario, onL
 
       {/* Footer */}
       <footer className="footer">
-        <p>Andrés & Denisse © 2024 - Brújula Marketing</p>
+        <p>Andrés & Denisse © {new Date().getFullYear()} - Brújula Marketing</p>
       </footer>
     </div>
   )

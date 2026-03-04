@@ -514,6 +514,7 @@ export default function Contabilidad() {
     const [anio, mes] = mesSeleccionado.split('-').map(Number)
     const fechaVencimiento = getFechaVencimientoIva(anio, mes)
     const diasRestantes = getDaysRemaining(fechaVencimiento.toISOString().split('T')[0])
+    const impuestoTotal = Math.max(0, totales.iva + totales.ppm - totales.ivaCredito)
     
     return {
       anio,
@@ -522,8 +523,10 @@ export default function Contabilidad() {
       fechaVencimiento,
       diasRestantes,
       ivaDebito: totales.iva,
+      ppm: totales.ppm,
       ivaCredito: totales.ivaCredito,
-      ivaAPagar: totales.ivaAPagar
+      ivaAPagar: totales.ivaAPagar,
+      impuestoTotal
     }
   }
 
@@ -773,10 +776,18 @@ export default function Contabilidad() {
                   <span className="iva-monto">{formatCLP(datosIva.ivaDebito)}</span>
                 </div>
 
+                <div className="iva-operador">+</div>
+
+                <div className="iva-item ppm">
+                  <span className="iva-label">PPM</span>
+                  <span className="iva-sublabel">(Pago Provisional Mensual)</span>
+                  <span className="iva-monto">{formatCLP(datosIva.ppm)}</span>
+                </div>
+
                 <div className="iva-operador">−</div>
 
                 <div className="iva-item credito">
-                  <span className="iva-label">IVA Crédito</span>
+                  <span className="iva-label">IVA Crédito Fiscal</span>
                   <span className="iva-sublabel">(IVA de tus compras con factura)</span>
                   <span className="iva-monto">{formatCLP(datosIva.ivaCredito)}</span>
                 </div>
@@ -784,10 +795,10 @@ export default function Contabilidad() {
                 <div className="iva-operador">=</div>
 
                 <div className="iva-item resultado">
-                  <span className="iva-label">IVA a Pagar</span>
+                  <span className="iva-label">Impuesto Total a Pagar</span>
                   <span className="iva-sublabel">(antes del 12 de {getNombreMes(datosIva.mes === 12 ? 1 : datosIva.mes + 1)})</span>
-                  <span className={`iva-monto ${datosIva.ivaAPagar > 0 ? 'apagar' : 'afavor'}`}>
-                    {datosIva.ivaAPagar > 0 ? formatCLP(datosIva.ivaAPagar) : '$0 (a favor)'}
+                  <span className={`iva-monto ${datosIva.impuestoTotal > 0 ? 'apagar' : 'afavor'}`}>
+                    {datosIva.impuestoTotal > 0 ? formatCLP(datosIva.impuestoTotal) : '$0 (a favor)'}
                   </span>
                 </div>
               </div>
@@ -813,9 +824,10 @@ export default function Contabilidad() {
             <ul>
               <li><strong>IVA Débito:</strong> Es el IVA que cobras a tus clientes en tus facturas/boletas.</li>
               <li><strong>IVA Crédito:</strong> Es el IVA que pagas en tus compras cuando te dan factura.</li>
-              <li><strong>IVA a Pagar:</strong> Débito − Crédito. Se paga al SII antes del día 12 del mes siguiente.</li>
-              <li>Si tus compras con factura son mayores a tus ventas, el IVA queda "a favor" para el próximo mes.</li>
-            </ul>
+              <li><strong>PPM:</strong> Pago Provisional Mensual, es un anticipo del impuesto a la renta calculado sobre tus ventas netas.</li>
+              <li><strong>Impuesto Total a Pagar:</strong> IVA Débito + PPM − IVA Crédito Fiscal. Se declara al SII antes del día 12 del mes siguiente.</li>
+              <li>Si tu IVA crédito supera el débito más el PPM, el saldo queda "a favor" para el próximo mes.</li>
+              </ul>
           </div>
         </div>
       )}

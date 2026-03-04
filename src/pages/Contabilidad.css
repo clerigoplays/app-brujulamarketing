@@ -663,3 +663,12 @@
     text-align: center;
   }
 }
+
+.iva-item.ppm {
+  background: rgba(245, 158, 11, 0.1);
+  border: 2px solid rgba(245, 158, 11, 0.3);
+}
+
+.iva-item.ppm .iva-monto {
+  color: var(--color-warning);
+}
