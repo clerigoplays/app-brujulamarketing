@@ -260,10 +260,3 @@
     display: none;
   }
 }
-```
-
----
-
-**PASO 6 — Agregar a `.gitignore`** (verifica que exista esta línea, si no agrégala):
-```
-.env.local

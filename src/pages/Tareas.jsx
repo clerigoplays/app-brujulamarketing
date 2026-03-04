@@ -436,15 +436,16 @@ export default function Tareas() {
     const [guardando, setGuardando] = useState(false)
     const [htmlCode, setHtmlCode] = useState('')
     const [datos, setDatos] = useState({
-      rubro: '',
-      inversion: '',
-      personas_alcanzadas: '',
-      impresiones: '',
-      frecuencia: '',
-      conversaciones: '',
-      costo_por_conversion: '',
-      ctr: ''
-    })
+    rubro: '',
+    inversion: '',
+    personas_alcanzadas: '',
+    impresiones: '',
+    frecuencia: '',
+    conversaciones: '',
+    costo_por_conversion: '',
+    ctr: ''
+  })
+
 
     const labels = {
       rubro: 'Rubro del cliente',
@@ -693,23 +694,42 @@ Devuélveme ÚNICAMENTE el código HTML completo, sin texto adicional antes ni d
                         if (!file) return
                         const text = await file.text()
                         const lines = text.split('\n').filter(l => l.trim())
-                        const sep = lines[0].includes(';') ? ';' : ','
-                        function parseCsvLine(line) {
+
+                        // Parser robusto que maneja comillas y distintos separadores
+                        function parseCsvLine(line, sep) {
                           const result = []
                           let cur = '', inQ = false
                           for (let i = 0; i < line.length; i++) {
                             const c = line[i]
-                            if (c === '"') { inQ = !inQ }
-                            else if (c === sep && !inQ) { result.push(cur.trim()); cur = '' }
-                            else { cur += c }
+                            if (c === '"') {
+                              inQ = !inQ
+                            } else if (c === sep && !inQ) {
+                              result.push(cur.trim())
+                              cur = ''
+                            } else {
+                              cur += c
+                            }
                           }
                           result.push(cur.trim())
                           return result
                         }
-                        const headers = parseCsvLine(lines[0]).map(h => h.replace(/^"|"$/g,'').trim())
-                        const values = parseCsvLine(lines[1] || '').map(v => v.replace(/^"|"$/g,'').trim())
+
+                        // Detectar separador
+                        const sep = lines[0].includes(';') ? ';' : ','
+
+                        const rawHeaders = parseCsvLine(lines[0], sep)
+                        const rawValues = parseCsvLine(lines[1] || '', sep)
+
+                        // Limpiar headers: quitar comillas residuales y espacios
+                        const headers = rawHeaders.map(h => h.replace(/^["'\s]+|["'\s]+$/g, ''))
+                        const values = rawValues.map(v => v.replace(/^["'\s]+|["'\s]+$/g, ''))
+
                         const row = {}
                         headers.forEach((h, i) => { row[h] = values[i] || '' })
+
+                        // Debug: ver qué columnas encontró
+                        console.log('Headers CSV:', headers)
+                        console.log('Row CSV:', row)
 
                         const mapeo = {
                           'Alcance': 'personas_alcanzadas',
@@ -717,34 +737,34 @@ Devuélveme ÚNICAMENTE el código HTML completo, sin texto adicional antes ni d
                           'Frecuencia': 'frecuencia',
                           'Resultados': 'conversaciones',
                           'Costo por resultados': 'costo_por_conversion',
+                          'CTR (todos)': 'ctr',
                           'CTR (porcentaje de clics en el enlace)': 'ctr',
+                          'CTR (porcentaje de clics)': 'ctr',
                           'Importe gastado (CLP)': 'inversion',
+                          'Importe gastado': 'inversion',
                         }
-                        const nuevos = { ...datos }
-                        // Campos que deben redondearse a entero (pesos)
+
                         const camposEnteros = ['inversion', 'personas_alcanzadas', 'impresiones', 'conversaciones', 'costo_por_conversion']
-                        // Campos que conservan decimales
                         const camposDecimales = ['frecuencia', 'ctr']
 
+                        const nuevos = { ...datos }
                         Object.entries(mapeo).forEach(([col, campo]) => {
                           const val = row[col]
                           if (val !== undefined && val !== '') {
-                            // El CSV de Meta usa punto como separador decimal (notación anglosajona)
-                            // Primero parseamos el número real
                             const numReal = parseFloat(val)
                             if (isNaN(numReal)) {
                               nuevos[campo] = val
                             } else if (camposEnteros.includes(campo)) {
-                              // Redondear a entero y mostrar sin decimales
                               nuevos[campo] = String(Math.round(numReal))
                             } else if (camposDecimales.includes(campo)) {
-                              // Conservar hasta 2 decimales, usando punto (el campo acepta texto libre)
                               nuevos[campo] = String(Math.round(numReal * 100) / 100)
                             } else {
                               nuevos[campo] = String(numReal)
                             }
                           }
                         })
+
+                        // Cargar rubro desde BD
                         try {
                           const { data: proy } = await supabase
                             .from('proyectos')
@@ -753,6 +773,7 @@ Devuélveme ÚNICAMENTE el código HTML completo, sin texto adicional antes ni d
                             .single()
                           if (proy?.cliente?.rubro) nuevos.rubro = proy.cliente.rubro
                         } catch(_) {}
+
                         setDatos(nuevos)
                         e.target.value = ''
                       }}
